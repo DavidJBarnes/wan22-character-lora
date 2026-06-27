@@ -27,6 +27,7 @@ accelerate launch --num_cpu_threads_per_process 1 --mixed_precision fp16 \
     --vae "$VAE" \
     --t5 "$T5" \
     --dataset_config "$DATASET_CONFIG" \
+    --sdpa \
     --network_module networks.lora_wan \
     --network_dim 16 --network_alpha 16 \
     --learning_rate 1e-4 \
