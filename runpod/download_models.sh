@@ -10,10 +10,9 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/config.sh"
 
-pip install -q -U "huggingface_hub[cli,hf_xet]" >/dev/null 2>&1 || true
-
-DL="$MODELS_DIR/.dl"          # staging dir (same filesystem -> moves are instant)
-mkdir -p "$MODELS_DIR" "$DL"
+# Only add the Xet accelerator — do NOT bump huggingface_hub itself: musubi's
+# transformers pins huggingface-hub<1.0, and upgrading it breaks the cache/train step.
+pip install -q hf_xet >/dev/null 2>&1 || true
 
 fetch() {  # repo  remote_path  final_name
     local repo="$1" path="$2" name="$3"
@@ -21,10 +20,20 @@ fetch() {  # repo  remote_path  final_name
         echo "SKIP  $name (exists)"; return 0
     fi
     echo "GET   $name  <-  $repo/$path"
-    hf download "$repo" "$path" --local-dir "$DL"
-    mv -f "$DL/$path" "$MODELS_DIR/$name"
-    rm -rf "$DL/.cache" "$DL/split_files"   # reclaim staging space
+    # Python API is stable across huggingface_hub versions (CLI name changed in 1.x);
+    # Xet-aware, so it refreshes presigned URLs (no aria2 403s on large weights).
+    MODELS_DIR="$MODELS_DIR" python - "$repo" "$path" "$name" <<'PY'
+import os, shutil, sys
+from huggingface_hub import hf_hub_download
+repo, path, name = sys.argv[1], sys.argv[2], sys.argv[3]
+src = hf_hub_download(repo_id=repo, filename=path)
+dst = os.path.join(os.environ["MODELS_DIR"], name)
+shutil.copy(src, dst)   # copy out of the hub cache, then it can be GC'd
+print("saved", dst)
+PY
 }
+
+mkdir -p "$MODELS_DIR"
 
 # DiT — low-noise I2V 14B (~27GB). musubi accepts the Comfy-Org repackaged format.
 fetch "Comfy-Org/Wan_2.2_ComfyUI_Repackaged" \
@@ -42,6 +51,5 @@ fetch "Comfy-Org/Wan_2.2_ComfyUI_Repackaged" \
       "split_files/vae/wan_2.1_vae.safetensors" \
       "wan_2.1_vae.safetensors"
 
-rm -rf "$DL"
 echo "=== model download complete ==="
 ls -lh "$MODELS_DIR"

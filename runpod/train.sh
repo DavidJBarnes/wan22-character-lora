@@ -20,7 +20,7 @@ source "$HERE/config.sh"
 
 mkdir -p "$OUTPUT_DIR"
 
-accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
+accelerate launch --num_cpu_threads_per_process 1 --mixed_precision fp16 \
     "$MUSUBI/src/musubi_tuner/wan_train_network.py" \
     --task i2v-A14B \
     --dit "$DIT_LOW" \
@@ -36,7 +36,7 @@ accelerate launch --num_cpu_threads_per_process 1 --mixed_precision bf16 \
     --preserve_distribution_shape \
     --max_train_epochs 10 \
     --save_every_n_epochs 1 \
-    --mixed_precision bf16 --fp8_base \
+    --mixed_precision fp16 --fp8_base \
     --gradient_checkpointing \
     --max_data_loader_n_workers 2 --persistent_data_loader_workers \
     --seed 42 \
