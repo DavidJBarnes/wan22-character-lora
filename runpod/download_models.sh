@@ -21,7 +21,7 @@ fetch() {  # repo  remote_path  final_name
         echo "SKIP  $name (exists)"; return 0
     fi
     echo "GET   $name  <-  $repo/$path"
-    huggingface-cli download "$repo" "$path" --local-dir "$DL"
+    hf download "$repo" "$path" --local-dir "$DL"
     mv -f "$DL/$path" "$MODELS_DIR/$name"
     rm -rf "$DL/.cache" "$DL/split_files"   # reclaim staging space
 }
