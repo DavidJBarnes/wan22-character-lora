@@ -20,6 +20,9 @@ source "$HERE/config.sh"
 
 mkdir -p "$OUTPUT_DIR"
 
+# Reduce allocator fragmentation (the 14B sits right at the 24GB edge).
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
 accelerate launch --num_cpu_threads_per_process 1 --mixed_precision fp16 \
     "$MUSUBI/src/musubi_tuner/wan_train_network.py" \
     --task i2v-A14B \
@@ -39,6 +42,7 @@ accelerate launch --num_cpu_threads_per_process 1 --mixed_precision fp16 \
     --save_every_n_epochs 1 \
     --mixed_precision fp16 --fp8_base \
     --gradient_checkpointing \
+    --blocks_to_swap 20 \
     --max_data_loader_n_workers 2 --persistent_data_loader_workers \
     --seed 42 \
     --output_dir "$OUTPUT_DIR" \
