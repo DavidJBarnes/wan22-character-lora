@@ -1,0 +1,17 @@
+# musubi-tuner dataset config — Kelly "driveway" character LoRA.
+# Still-image dataset (18 imgs + .txt captions). Trained at 512 with aspect-ratio
+# bucketing so the mixed 1024x1024 / 1024x1536 sources are NOT distorted.
+#
+# Step math: 18 images x num_repeats(10) = 180 steps/epoch; x 10 epochs = ~1800 steps.
+# Tune num_repeats / max_train_epochs (in train.sh) to change total steps.
+
+[general]
+caption_extension = ".txt"
+batch_size = 1
+enable_bucket = true
+bucket_no_upscale = false
+
+[[datasets]]
+image_directory = "/workspace/dataset"
+resolution = [512, 512]
+num_repeats = 10
