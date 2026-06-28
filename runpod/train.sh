@@ -9,11 +9,17 @@
 #   --preserve_distribution_shape   Wan 2.2 recommended for stable timestep sampling.
 #   --discrete_flow_shift 5.0       Official I2V inference shift.
 #   dim 16 / alpha 16      alpha == dim gives better Wan results than the alpha=1 default.
+#   --blocks_to_swap 4     The 14B in fp8 peaks ~23.5GB during the fp16->fp8 LOAD, which
+#                          OOMs a 24GB card by a hair. Swapping just 4 transformer blocks
+#                          to CPU clears that load spike; runtime then sits ~14GB. Keep it
+#                          MINIMAL: each swapped block adds ~1s/step of PCIe transfer
+#                          (swap=20 was 23s/step, swap=4 is ~4.8s/step). Raise to 6-8 only
+#                          if you still OOM; never go high "to be safe" — it's the opposite.
+#   fp16 (not bf16)        musubi asserts mixed_precision==fp16 for the fp16 repackaged DiT.
 #
 # Tuning knobs if v1 is off:
 #   - Undertrained (weak likeness): raise --learning_rate to 2e-4, or num_repeats in dataset.toml.
 #   - Overtrained (plasticky/static): pick an earlier epoch checkpoint, or lower steps.
-#   - OOM on 24GB: add `--blocks_to_swap 16` (trades a little speed for VRAM).
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/config.sh"
@@ -42,7 +48,7 @@ accelerate launch --num_cpu_threads_per_process 1 --mixed_precision fp16 \
     --save_every_n_epochs 1 \
     --mixed_precision fp16 --fp8_base \
     --gradient_checkpointing \
-    --blocks_to_swap 20 \
+    --blocks_to_swap 4 \
     --max_data_loader_n_workers 2 --persistent_data_loader_workers \
     --seed 42 \
     --output_dir "$OUTPUT_DIR" \
